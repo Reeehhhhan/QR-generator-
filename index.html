@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>QR Generator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #eef1f4;
+    --ink: #1b1f2a;
+    --muted: #5d6675;
+    --accent: #2f4bff;
+    --line: #c9d0da;
+    --paper: #ffffff;
+    color-scheme: light dark;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #12151c;
+      --ink: #eceff4;
+      --muted: #9aa4b5;
+      --accent: #7f93ff;
+      --line: #2c3342;
+      --paper: #1b1f2a;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "Bricolage Grotesque", system-ui, -apple-system, "Segoe UI", sans-serif;
+    display: grid;
+    place-items: center;
+    padding: 24px;
+  }
+  main { width: 100%; max-width: 420px; }
+  h1 { font-size: 2.2rem; font-weight: 800; letter-spacing: -0.02em; margin: 0 0 6px; }
+  p.lead { margin: 0 0 24px; color: var(--muted); }
+  label { display: block; font-weight: 600; margin-bottom: 8px; }
+  input[type="text"] {
+    width: 100%;
+    font: inherit;
+    padding: 14px 16px;
+    border: 2px solid var(--line);
+    border-radius: 10px;
+    background: var(--paper);
+    color: var(--ink);
+  }
+  input[type="text"]:focus-visible, button:focus-visible {
+    outline: 3px solid var(--accent);
+    outline-offset: 2px;
+  }
+  .stage {
+    margin-top: 20px;
+    background: #fff;
+    border: 2px solid var(--line);
+    border-radius: 10px;
+    padding: 20px;
+    display: grid;
+    place-items: center;
+    aspect-ratio: 1;
+  }
+  .stage.empty { background: var(--paper); color: var(--muted); text-align: center; }
+  #qr canvas, #qr img { width: 100% !important; height: auto !important; max-width: 320px; display: block; }
+  .actions { display: flex; gap: 10px; margin-top: 16px; }
+  button {
+    flex: 1;
+    font: inherit;
+    font-weight: 600;
+    padding: 13px 16px;
+    border-radius: 10px;
+    border: 2px solid var(--accent);
+    background: var(--accent);
+    color: #fff;
+    cursor: pointer;
+  }
+  button.ghost { background: transparent; color: var(--accent); }
+  @media (prefers-color-scheme: dark) { button:not(.ghost) { color: #12151c; } }
+  button:disabled { opacity: 0.4; cursor: not-allowed; }
+  #msg { min-height: 1.4em; margin: 12px 0 0; color: var(--muted); font-size: 0.9rem; }
+</style>
+</head>
+<body>
+<main>
+  <h1>QR Generator</h1>
+  <p class="lead">Type a link or any text. The code updates as you type.</p>
+
+  <label for="url">Link or text</label>
+  <input id="url" type="text" placeholder="google.com" autocomplete="off" autofocus>
+
+  <div class="stage empty" id="stage"><span id="placeholder">Your QR code will appear here</span><div id="qr" hidden></div></div>
+
+  <div class="actions">
+    <button id="download" disabled>Download PNG</button>
+    <button id="clear" class="ghost">Clear</button>
+  </div>
+  <p id="msg" aria-live="polite"></p>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+  const input = document.getElementById("url");
+  const stage = document.getElementById("stage");
+  const qrBox = document.getElementById("qr");
+  const holder = document.getElementById("placeholder");
+  const dl = document.getElementById("download");
+  const msg = document.getElementById("msg");
+  let qr = null;
+
+  // "google.com" -> "https://google.com" so phone scanners open it as a link
+  function normalize(text) {
+    const t = text.trim();
+    if (/^[a-z][a-z0-9+.-]*:/i.test(t)) return t;
+    if (/^[^\s]+\.[a-z]{2,}(\/.*)?$/i.test(t)) return "https://" + t;
+    return t;
+  }
+
+  function render() {
+    const value = normalize(input.value);
+    if (!value) {
+      qrBox.hidden = true;
+      holder.hidden = false;
+      stage.classList.add("empty");
+      dl.disabled = true;
+      msg.textContent = "";
+      return;
+    }
+    qrBox.innerHTML = "";
+    try {
+      qr = new QRCode(qrBox, { text: value, width: 512, height: 512, correctLevel: QRCode.CorrectLevel.M });
+    } catch (e) {
+      msg.textContent = "That text is too long for a QR code. Try something shorter.";
+      dl.disabled = true;
+      return;
+    }
+    qrBox.hidden = false;
+    holder.hidden = true;
+    stage.classList.remove("empty");
+    dl.disabled = false;
+    msg.textContent = "Encoded: " + value;
+  }
+
+  dl.addEventListener("click", () => {
+    const canvas = qrBox.querySelector("canvas");
+    if (!canvas) return;
+    const a = document.createElement("a");
+    a.href = canvas.toDataURL("image/png");
+    a.download = "qrcode.png";
+    a.click();
+  });
+
+  document.getElementById("clear").addEventListener("click", () => {
+    input.value = "";
+    render();
+    input.focus();
+  });
+
+  input.addEventListener("input", render);
+</script>
+</body>
+</html>

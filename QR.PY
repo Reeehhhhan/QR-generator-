@@ -12,4 +12,4 @@ img.save("qrcode.png") #instead of file_path you can directly give your path her
 if img:
     print("GENERATED")
 else :
-    print("NOT GENERATED")  
+    print("NOT GENERATED")  git 
